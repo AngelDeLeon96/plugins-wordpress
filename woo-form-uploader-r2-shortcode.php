@@ -39,29 +39,34 @@ function threefold_formulario_shortcode()
         return '<p>Datos inválidos.</p>';
     }
 ?>
-    <div class="container mx-auto p-4">
-        <h2 class="text">
-            Sube hasta <?php echo esc_html($max_fotos); ?> archivos para tu pedido #<?php echo esc_html($order_id); ?>
-        </h2>
-        <span>*Debe subir al menos un archivo.</span>
-        <span>**Asegúrese de tener listos todos los archivos que desea subir antes de comenzar.</span>
-        <span>***Si no sube todos los archivos permitidos en el pack, deberá contactar al administrador, ya que no podrá
-            hacerlo posteriormente.</span>
-        <form action="<?php echo esc_url(add_query_arg('threefold_process', '1', site_url())); ?>" method="post"
-            enctype="multipart/form-data">
-            <input type="hidden" name="order_id" value="<?php echo esc_attr($order_id); ?>">
-            <input type="hidden" name="max_fotos" value="<?php echo esc_attr($max_fotos); ?>">
-            <?php wp_nonce_field('upload_photos', 'photo_upload_nonce'); ?>
-            <?php for ($i = 1; $i <= $max_fotos; $i++): ?>
-                <div class="mb-3">
-                    <label for="formFile<?php echo $i; ?>" class="form-label">Foto <?php echo $i; ?>:</label>
-                    <input <?php echo ($i == 1) ? 'required' : ''; ?> class="form-control" type="file"
-                        id="formFile<?php echo $i; ?>" name="archivos[]" accept="image/png, image/jpeg, video/*">
-                </div>
-            <?php endfor; ?>
-            <button class="btn btn-primary" type="submit">Subir archivos</button>
-        </form>
-    </div>
+<div class="container mx-auto p-4">
+    <h2 class="text">
+        Sube hasta <?php echo esc_html($max_fotos); ?> archivos para tu pedido #<?php echo esc_html($order_id); ?>
+    </h2>
+    <span>*Debe subir al menos un archivo.</span>
+    <br>
+    <span>**Asegúrese de tener listos todos los archivos que desea subir antes de comenzar.</span>
+    <br>
+    <span>***Si no sube todos los archivos permitidos en el pack, deberá contactar al administrador, ya que no podrá
+        hacerlo posteriormente.
+    </span>
+    </br>
+    <form action="<?php echo esc_url(add_query_arg('threefold_process', '1', site_url())); ?>" method="post"
+        enctype="multipart/form-data">
+        <input type="hidden" name="order_id" value="<?php echo esc_attr($order_id); ?>">
+        <input type="hidden" name="max_fotos" value="<?php echo esc_attr($max_fotos); ?>">
+        <?php wp_nonce_field('upload_photos', 'photo_upload_nonce'); ?>
+        <?php for ($i = 1; $i <= $max_fotos; $i++): ?>
+        <div class="mb-3">
+            <label for="formFile<?php echo $i; ?>" class="form-label">Archivo: <?php echo $i; ?>:</label>
+            <input placeholder="Escoger archivo" <?php echo ($i == 1) ? 'required' : ''; ?> class="form-control"
+                type="file" id="formFile<?php echo $i; ?>" name="archivos[]" accept="image/png, image/jpeg, video/*">
+        </div>
+        <?php endfor; ?>
+        <br>
+        <button class="btn btn-primary" type="submit">Subir archivos</button>
+    </form>
+</div>
 <?php
     // Devolver el contenido capturado
     return ob_get_clean();

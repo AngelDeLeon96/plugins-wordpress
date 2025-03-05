@@ -1,4 +1,5 @@
 <?php
+ob_start();
 /*
 Plugin Name: WooCommerce Custom Redirect
 Description: Redirige a los clientes a una URL específica después de comprar productos específicos, en este caso la pagina debe contener el shortcode del formulario.
@@ -84,80 +85,80 @@ function wcr_admin_page()
 
     // Formulario de configuración
 ?>
-    <div class="wrap">
-        <h1>WooCommerce Custom Redirect</h1>
-        <p>Redirige a los clientes a una URL específica después de comprar productos específicos, en este caso la pagina
-            debe contener el shortcode [threefold_formulario] del formulario.</p>
-        <form method="post" action="">
-            <?php wp_nonce_field('wcr_save_settings'); ?>
-            <table class="form-table">
-                <tr>
-                    <th scope="row"><label for="product_ids">ID del Producto</label></th>
-                    <td>
-                        <input type="number" min="1" name="product_ids" id="product_ids" required>
-                        <p class="description">Ingresa el ID del producto.</p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><label for="n_items">Cantidad de items</label></th>
-                    <td>
-                        <input type="number" min="1" name="n_items" id="n_items" required>
-                        <p class="description">Ingresa el numero de items.</p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><label for="redirect_url">URL de Redirección</label></th>
-                    <td>
-                        <input type="text" name="redirect_url" id="redirect_url" required title="Formato invalido"
-                            pattern="^(?!.*(http:\/\/|https:\/\/|www\.|\.com|\.org|\.net|\.io|\.co)).*$">
-                        <p class="description">Ingrese el identificador (slug) de la página interna a la cual desea
-                            redirigir.</p>
-                    </td>
-                </tr>
-            </table>
-            <?php submit_button('Guardar Configuración', 'primary', 'wcr_save_settings'); ?>
-        </form>
+<div class="wrap">
+    <h1>WooCommerce Custom Redirect</h1>
+    <p>Redirige a los clientes a una URL específica después de comprar productos específicos, en este caso la pagina
+        debe contener el shortcode [threefold_formulario] del formulario.</p>
+    <form method="post" action="">
+        <?php wp_nonce_field('wcr_save_settings'); ?>
+        <table class="form-table">
+            <tr>
+                <th scope="row"><label for="product_ids">ID del Producto</label></th>
+                <td>
+                    <input type="number" min="1" name="product_ids" id="product_ids" required>
+                    <p class="description">Ingresa el ID del producto.</p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="n_items">Cantidad de items</label></th>
+                <td>
+                    <input type="number" min="1" name="n_items" id="n_items" required>
+                    <p class="description">Ingresa el numero de items.</p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="redirect_url">URL de Redirección</label></th>
+                <td>
+                    <input type="text" name="redirect_url" id="redirect_url" required title="Formato invalido"
+                        pattern="^(?!.*(http:\/\/|https:\/\/|www\.|\.com|\.org|\.net|\.io|\.co)).*$">
+                    <p class="description">Ingrese el identificador (slug) de la página interna a la cual desea
+                        redirigir.</p>
+                </td>
+            </tr>
+        </table>
+        <?php submit_button('Guardar Configuración', 'primary', 'wcr_save_settings'); ?>
+    </form>
 
-        <h2>Redirecciones Configuradas</h2>
-        <table class="wp-list-table widefat fixed striped">
-            <thead>
-                <tr>
-                    <th>ID del Producto</th>
-                    <th>URL de Redirección</th>
-                    <th>Cantidad de items</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (!empty($redirect_data)) : ?>
-                    <?php foreach ($redirect_data as $item) : ?>
-                        <tr>
-                            <td><?php echo esc_html($item['product_id']); ?></td>
-                            <td><a target="__blank"
-                                    href="<?php echo esc_url(site_url($item['redirect_url'])); ?>"><?php echo esc_url(site_url($item['redirect_url'])); ?></a>
-                            </td>
-                            <td>
-                                <?php echo esc_html($item['items']); ?>
-                            </td>
-                            <td>
-                                <a href="<?php echo wp_nonce_url(
+    <h2>Redirecciones Configuradas</h2>
+    <table class="wp-list-table widefat fixed striped">
+        <thead>
+            <tr>
+                <th>ID del Producto</th>
+                <th>URL de Redirección</th>
+                <th>Cantidad de items</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if (!empty($redirect_data)) : ?>
+            <?php foreach ($redirect_data as $item) : ?>
+            <tr>
+                <td><?php echo esc_html($item['product_id']); ?></td>
+                <td><a target="__blank"
+                        href="<?php echo esc_url(site_url($item['redirect_url'])); ?>"><?php echo esc_url(site_url($item['redirect_url'])); ?></a>
+                </td>
+                <td>
+                    <?php echo esc_html($item['items']); ?>
+                </td>
+                <td>
+                    <a href="<?php echo wp_nonce_url(
                                                 add_query_arg(array(
                                                     'action' => 'delete',
                                                     'product_id' => $item['product_id']
                                                 )),
                                                 'wcr_delete_redirect'
                                             ); ?>" class="button button-secondary">Eliminar</a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php else : ?>
-                    <tr>
-                        <td colspan="3">No hay redirecciones configuradas.</td>
-                    </tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
+                </td>
+            </tr>
+            <?php endforeach; ?>
+            <?php else : ?>
+            <tr>
+                <td colspan="3">No hay redirecciones configuradas.</td>
+            </tr>
+            <?php endif; ?>
+        </tbody>
+    </table>
+</div>
 <?php
 }
 
@@ -171,7 +172,6 @@ function wcr_redirect_after_purchase()
         $max_fotos = 0;
         if ($order) {
             $redirect_data = get_option('wcr_redirect_data', array());
-            var_dump($redirect_data);
 
             foreach ($order->get_items() as $item) {
                 $product_id = $item->get_product_id();
@@ -185,6 +185,7 @@ function wcr_redirect_after_purchase()
                     if (isset($product_id)) {
                         $code = $items . "OC" . $order_id;
                         setcookie('threefold_id', $code, time() + 3600, "/");
+                        ob_end_clean();
                         wp_redirect($url);
                         exit;
                     }
@@ -192,4 +193,7 @@ function wcr_redirect_after_purchase()
             }
         }
     }
+}
+if (!headers_sent()) {
+    ob_end_flush();
 }
