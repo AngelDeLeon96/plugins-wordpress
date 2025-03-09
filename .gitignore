@@ -1,3 +1,9 @@
 index.php
 woocommerce/*
 code-snippets/*
+wpforms-lite/*
+wp-mail-smtp/*
+*/phpqrcode/*
+aws/*
+woo-form-uploader-r2-shortcode/qr-generator-r2/phpqrcode/*
+woo-form-uploader-r2-shortcode/*.png

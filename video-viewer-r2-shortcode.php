@@ -15,6 +15,8 @@ if (!defined('ABSPATH')) {
 function video_viewer_shortcode($atts)
 {
     // Obtener el parámetro UUID de la URL
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'threefold_uploads_r2';
     $uuid = isset($_GET['uuid']) ? sanitize_text_field($_GET['uuid']) : '';
     $order_id = isset($_GET['id']) ? sanitize_text_field($_GET['id']) : '';
 
@@ -22,50 +24,49 @@ function video_viewer_shortcode($atts)
         return '<p>No se ha proporcionado un UUID o ID válido.</p>';
     }
 
-    global $wpdb;
-    $table_name = $wpdb->prefix . 'wc_orders_meta';
-    $meta_key = '_threefold_uploaded_files';
-
     // Buscar el registro en la base de datos
     $result = $wpdb->get_row($wpdb->prepare(
-        "SELECT meta_value FROM $table_name WHERE order_id = %d AND meta_key = %s",
+        "SELECT public_url, type, name FROM $table_name WHERE order_id = %d AND uuid = %s",
         $order_id,
-        $meta_key
+        $uuid
     ));
-
 
     if (!$result) {
         return '<p>No se encontraron datos.</p>';
     }
 
-    // Deserializar los datos
-    $meta_value = maybe_unserialize($result->meta_value);
-
-    if (!is_array($meta_value)) {
-        return '<p>Formato de datos no válido.</p>';
-    }
-
     // Buscar el video por UUID
-    $video_url = '';
-    foreach ($meta_value as $item) {
-        if (isset($item['uuid']) && $item['uuid'] === $uuid && isset($item['public_url'])) {
-            $video_url = $item['public_url'];
-            break;
-        }
-    }
+    $video_url = $result->public_url;
+    $tipo = $result->type;
+    // Validar el tipo de archivo
+    $nombre = $result->name;
 
     if (empty($video_url)) {
         return '<p>No se encontró el video.</p>';
     }
 
-    // Mostrar el video
-    return '
-    <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%;">
+    $allowed_types = ['video/mp4', 'video/avi', 'video/mpeg', 'video/quicktime'];
+    $allowed_image_types = ['image/jpg', 'image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+    if (in_array($tipo, $allowed_types)) {
+        $allUploaded = '<h2> Archivo: ' . explode("/", $nombre)[1] . '</h2> 
+        <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%;">
         <video controls style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
             <source src="' . esc_url($video_url) . '">
             Tu navegador no soporta la etiqueta de video.
         </video>
     </div>';
+    } elseif (in_array($tipo, $allowed_image_types)) {
+        $allUploaded = '<h2>Archivo: ' . explode("/", $nombre)[1] . '</h2>
+        <div style="max-width: 100%;">
+        <img src="' . esc_url($video_url) . '" alt="' . esc_attr($nombre) . '" style="width: 100%; height: auto;">
+        </div>';
+    } else {
+        $allUploaded = '<p>El archivo debe ser un video o una imagen.</p>';
+    }
+
+    // Mostrar el video
+    return $allUploaded;
 }
 
 // Registrar el shortcode

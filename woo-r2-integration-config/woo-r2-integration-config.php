@@ -13,7 +13,7 @@ if (!defined('WPINC')) {
 }
 
 // Verificar si el autoloader de Composer existe
-require_once __DIR__ . '../../../aws/aws-autoloader.php';
+require_once __DIR__ . '/../aws/aws-autoloader.php';
 
 use Aws\S3\S3Client;
 use Aws\Exception\AwsException;

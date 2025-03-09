@@ -2,14 +2,42 @@
 
 /**
  * Plugin Name: Formulario de Subida de Archivos a R2
- * Description: Shortcode para insertar un formulario de subida de archivos a Cloudflare R2 vinculado a pedidos, debe estar instalado AWS SDK y configurado el plugin R2 Integration, utilizar el shortcode [threefold_formulario] colocarlo en una page.
- * Version: 1.1
+ * Description: Shortcode para insertar un formulario de subida de archivos a Cloudflare R2 vinculado a pedidos, debe estar instalado AWS SDK y configurado el plugin R2 Integration, utilizar el shortcode [threefold_formulario] colocarlo en una pagina.
+ * Version: 1.2
  * Author: United Fixers
  */
-
+require_once __DIR__ . '/uploader-to-r2.php';
 // Evitar acceso directo al archivo
 if (!defined('ABSPATH')) {
     exit;
+}
+
+// Crear tabla para almacenar los archivos subidos
+register_activation_hook(__FILE__, 'threefold_create_uploads_table');
+
+function threefold_create_uploads_table()
+{
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'threefold_uploads_r2';
+
+    $charset_collate = $wpdb->get_charset_collate();
+
+    $sql = "CREATE TABLE IF NOT EXISTS $table_name (
+        id bigint(20) NOT NULL AUTO_INCREMENT,
+        uuid varchar(36) NOT NULL,
+        name varchar(255) NOT NULL,
+        type varchar(255) NULL,
+        size bigint(20) NULL,
+        public_url text NOT NULL,
+        order_id bigint(20) NOT NULL,
+        created_at datetime DEFAULT CURRENT_TIMESTAMP,
+        updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY  (id),
+        KEY order_id (order_id)
+    ) $charset_collate;";
+
+    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+    dbDelta($sql);
 }
 
 /**
@@ -39,34 +67,34 @@ function threefold_formulario_shortcode()
         return '<p>Datos inválidos.</p>';
     }
 ?>
-<div class="container mx-auto p-4">
-    <h2 class="text">
-        Sube hasta <?php echo esc_html($max_fotos); ?> archivos para tu pedido #<?php echo esc_html($order_id); ?>
-    </h2>
-    <span>*Debe subir al menos un archivo.</span>
-    <br>
-    <span>**Asegúrese de tener listos todos los archivos que desea subir antes de comenzar.</span>
-    <br>
-    <span>***Si no sube todos los archivos permitidos en el pack, deberá contactar al administrador, ya que no podrá
-        hacerlo posteriormente.
-    </span>
-    </br>
-    <form action="<?php echo esc_url(add_query_arg('threefold_process', '1', site_url())); ?>" method="post"
-        enctype="multipart/form-data">
-        <input type="hidden" name="order_id" value="<?php echo esc_attr($order_id); ?>">
-        <input type="hidden" name="max_fotos" value="<?php echo esc_attr($max_fotos); ?>">
-        <?php wp_nonce_field('upload_photos', 'photo_upload_nonce'); ?>
-        <?php for ($i = 1; $i <= $max_fotos; $i++): ?>
-        <div class="mb-3">
-            <label for="formFile<?php echo $i; ?>" class="form-label">Archivo: <?php echo $i; ?>:</label>
-            <input placeholder="Escoger archivo" <?php echo ($i == 1) ? 'required' : ''; ?> class="form-control"
-                type="file" id="formFile<?php echo $i; ?>" name="archivos[]" accept="image/png, image/jpeg, video/*">
-        </div>
-        <?php endfor; ?>
+    <div class="container mx-auto p-4">
+        <h2 class="text">
+            Sube hasta <?php echo esc_html($max_fotos); ?> archivos para tu pedido #<?php echo esc_html($order_id); ?>
+        </h2>
+        <span>*Debe subir al menos un archivo.</span>
         <br>
-        <button class="btn btn-primary" type="submit">Subir archivos</button>
-    </form>
-</div>
+        <span>**Asegúrese de tener listos todos los archivos que desea subir antes de comenzar.</span>
+        <br>
+        <span>***Si no sube todos los archivos permitidos en el pack, deberá contactar al administrador, ya que no podrá
+            hacerlo posteriormente.
+        </span>
+        </br>
+        <form action="<?php echo esc_url(add_query_arg('threefold_process', '1', site_url())); ?>" method="post"
+            enctype="multipart/form-data">
+            <input type="hidden" name="order_id" value="<?php echo esc_attr($order_id); ?>">
+            <input type="hidden" name="max_fotos" value="<?php echo esc_attr($max_fotos); ?>">
+            <?php wp_nonce_field('upload_photos', 'photo_upload_nonce'); ?>
+            <?php for ($i = 1; $i <= $max_fotos; $i++): ?>
+                <div class="mb-3">
+                    <label for="formFile<?php echo $i; ?>" class="form-label">Archivo: <?php echo $i; ?>:</label>
+                    <input placeholder="Escoger archivo" <?php echo ($i == 1) ? 'required' : ''; ?> class="form-control"
+                        type="file" id="formFile<?php echo $i; ?>" name="archivos[]" accept="image/png, image/jpeg, video/*">
+                </div>
+            <?php endfor; ?>
+            <br>
+            <button class="btn btn-primary" type="submit">Subir archivos</button>
+        </form>
+    </div>
 <?php
     // Devolver el contenido capturado
     return ob_get_clean();
@@ -115,120 +143,7 @@ function threefold_subir_archivo($s3Client, $bucket, $archivoTmp, $nombre, $tipo
 /**
  * Función para subir archivos a Cloudflare R2
  */
-function threefold_upload_to_cloudflare_r2($files, $order_id)
-{
-    // Verificar que el SDK de AWS esté disponible
-    if (!class_exists('Aws\S3\S3Client')) {
-        // Intentar cargar el autoloader desde varias ubicaciones comunes
-        $posibles_rutas = [
-            plugin_dir_path(__FILE__) . 'aws/aws-autoloader.php',
-            WP_PLUGIN_DIR . '/aws-sdk-php/aws-autoloader.php',
-            ABSPATH . 'aws/aws-autoloader.php',
-            __DIR__ . '../../../aws/aws-autoloader.php'
-            // Agrega más rutas según sea necesario
-        ];
 
-        $cargado = false;
-        foreach ($posibles_rutas as $ruta) {
-            if (file_exists($ruta)) {
-                require_once $ruta;
-                $cargado = true;
-                break;
-            }
-        }
-
-        if (!$cargado) {
-            error_log('Error: No se pudo cargar el AWS SDK. Por favor, instala el SDK de AWS.');
-            return false;
-        }
-    }
-
-    // Configuración de credenciales de Cloudflare R2
-    $options = get_option('wc_r2_files_access_settings', [
-        'endpoint' => '',
-        'access_key' => '',
-        'secret_key' => '',
-        'bucket_name' => '',
-        'public_domain' => '',
-    ]);
-
-    // Verificar que existan todas las opciones necesarias
-    if (
-        empty($options['endpoint']) || empty($options['access_key']) ||
-        empty($options['secret_key']) || empty($options['bucket_name'])
-    ) {
-        error_log('Error: Configuración de R2 incompleta. Por favor, configura el plugin WooCommerce R2 Files Access.');
-        return false;
-    }
-    //config del s3client de R2
-    $s3Client = new Aws\S3\S3Client([
-        'endpoint' => $options['endpoint'],
-        'version' => 'latest',
-        'region'  => 'auto',
-        'credentials' => [
-            'key'    => $options['access_key'],
-            'secret' => $options['secret_key'],
-        ],
-    ]);
-
-    $bucket = $options['bucket_name'];
-    $allUploaded = true;
-    $uploaded_files = [];
-
-    foreach ($files['archivos']['name'] as $key => $nombre) {
-        $archivo_temporal = $files['archivos']['tmp_name'][$key];
-        $tipo = $files['archivos']['type'][$key];
-        $size = $files['archivos']['size'][$key];
-
-        // Verificar si el archivo fue subido
-        if (empty($nombre) || empty($archivo_temporal)) {
-            continue; // Saltar archivos vacíos
-        }
-
-        // Validar el tipo de archivo
-        $allowed_types = ['image/jpeg', 'image/png', 'video/mp4', 'video/avi', 'video/mpeg', 'video/quicktime'];
-        if (!in_array($tipo, $allowed_types)) {
-            $allUploaded = false;
-            continue;
-        }
-
-        try {
-            // Generar una key única para el archivo
-            $name = sanitize_file_name($nombre);
-            $uuid = wp_generate_uuid4();
-            $key = 'order_' . intval($order_id) . '/' . $name;
-            $res = threefold_subir_archivo($s3Client, $bucket, $archivo_temporal, $key, $tipo);
-
-            if ($res) {
-                $uploaded_files[] = [
-                    'uuid' => $uuid,
-                    'name' => $key,
-                    'public_url' =>  $options['public_domain'] . $key
-                ];
-            } else {
-                $allUploaded = false;
-            }
-        } catch (Exception $e) {
-            error_log("Error al subir " . $nombre . ": " . $e->getMessage());
-            $allUploaded = false;
-        }
-    }
-
-    // Opcionalmente, guardar información sobre los archivos subidos en metadata del pedido
-    if (!empty($uploaded_files) && function_exists('wc_get_order')) {
-        $order = wc_get_order($order_id);
-        if ($order) {
-            $existing_files = $order->get_meta('_threefold_uploaded_files', true);
-            if (!is_array($existing_files)) {
-                $existing_files = [];
-            }
-            $order->update_meta_data('_threefold_uploaded_files', array_merge($existing_files, $uploaded_files));
-            $order->save();
-        }
-    }
-
-    return $allUploaded;
-}
 
 /**
  * Manejar el procesamiento de la subida de archivos
@@ -302,6 +217,7 @@ function threefold_mostrar_mensaje()
 }
 add_action('woocommerce_account_dashboard', 'threefold_mostrar_mensaje', 5);
 
+
 /**
  * Agregar script para verificar tipos de archivo antes de subir
  */
@@ -343,18 +259,22 @@ add_action('wp_enqueue_scripts', 'threefold_enqueue_scripts');
  */
 function threefold_mostrar_archivos_admin($order)
 {
-    $files = $order->get_meta('_threefold_uploaded_files', true);
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'threefold_uploads_r2';
+
+    $files = $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM $table_name WHERE order_id = %d ORDER BY created_at DESC",
+        $order->get_id()
+    ));
 
     if (!empty($files) && is_array($files)) {
         echo '<h3>Archivos subidos por el cliente</h3>';
         echo '<ul>';
         foreach ($files as $file) {
             echo '<li>';
-            if (!empty($file['public_url'])) {
-                echo '<a href="' . esc_url($file['public_url']) . '" target="_blank">' . esc_html(explode("/", $file['name'])[1]) . '</a>';
-            } else {
-                echo esc_html($file['name']) . ' (Subido a R2)';
-            }
+            echo '<a href="' . esc_url($file->public_url) . '" target="_blank">' .
+                esc_html(basename($file->name)) . '</a>';
+            echo ' - Subido: ' . esc_html($file->created_at);
             echo '</li>';
         }
         echo '</ul>';
